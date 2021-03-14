@@ -15,8 +15,8 @@
 #include <math.h>  
 
 
-int read_wav_header(FILE *in_file, short *sample_size_ptr, int *num_samples_ptr, int *sample_rate_ptr);
-int read_wav_data(FILE* in_file, short sample_size, int num_samples, int sample_rate);
+int read_wav_header(FILE *in_file, short *sample_size_ptr, int *num_samples_ptr, int *sample_rate_ptr, int *num_channels_ptr);
+int read_wav_data(FILE* in_file, short sample_size, int num_samples, int sample_rate, int num_channels);
 
 
 int main(int argc, char *argv[]) 
@@ -25,6 +25,7 @@ int main(int argc, char *argv[])
     short sample_size;  /* size of an audio sample (bits) */
     int num_samples;    /* number of audio samples */ 
     int sample_rate;    /* sample rate (samples/second) */
+    int num_channels;
     int wav_ok = 0;     /* 1 if the WAV file is ok, 0 otherwise */
 
     if (argc < 2) {
@@ -38,13 +39,13 @@ int main(int argc, char *argv[])
         return 2;
     }
 
-    wav_ok = read_wav_header(in_file, &sample_size, &num_samples, &sample_rate);
+    wav_ok = read_wav_header(in_file, &sample_size, &num_samples, &sample_rate, &num_channels);
     if (!wav_ok) {
        printf("wav file %s has incompatible format \n", argv[1]);   
        return 3;
     }
     else {
-         read_wav_data(in_file, sample_size, num_samples, sample_rate);
+         read_wav_data(in_file, sample_size, num_samples, sample_rate, num_channels);
     }   
 
     if (in_file) {
@@ -57,7 +58,7 @@ int main(int argc, char *argv[])
 /**
  *  function reads the RIFF, fmt, and start of the data chunk, prints relevant information 
  **/
-int read_wav_header(FILE *in_file, short *sample_size_ptr, int *num_samples_ptr, int *sample_rate_ptr) 
+int read_wav_header(FILE *in_file, short *sample_size_ptr, int *num_samples_ptr, int *sample_rate_ptr, int *num_channels_ptr) 
 {
     char chunk_id[] = "    ";  /* chunk id, note initialize as a C-string */
     char data[] = "    ";      /* chunk data */
@@ -111,6 +112,7 @@ int read_wav_header(FILE *in_file, short *sample_size_ptr, int *num_samples_ptr,
     fread(num_samples_ptr, 1, 4, in_file);
     *sample_rate_ptr = sample_rate;
     *sample_size_ptr = bits_per_smp;
+    *num_channels_ptr = num_channels;
 
      printf("chunk: %s \n", chunk_id);
 
@@ -121,15 +123,48 @@ int read_wav_header(FILE *in_file, short *sample_size_ptr, int *num_samples_ptr,
 /**
  *  function reads the WAV audio data (last part of the data chunk)
  **/
-int read_wav_data(FILE* in_file, short sample_size, int num_samples, int sample_rate) 
+int read_wav_data(FILE *in_file, short sample_size, int num_samples, int sample_rate, int num_channels) 
 {
-    float duration = num_samples / sample_rate;
+    float duration;
+    int right = 0;               /* 1 if left channel, 0 if right channel */
+    int curr_sample = 0;
+    int max_left = 0;
+    int max_right = 0;
+    int i;
 
+    /* read samples, byte by byte depending on number of channels and sample size */
+    for (i = 0; i < num_samples; i++) {
+        right = !right;
+        fread(&curr_sample, 1, sample_size / 8, in_file);
+        curr_sample = abs(curr_sample);
+
+        /* only the left sample array is modified for one channel */
+        if (!right || (num_channels == 1)) {
+            if (curr_sample > max_left) {
+                max_left = curr_sample;
+            }
+        }
+        else {
+            if (curr_sample > max_right ) {
+                max_right = curr_sample;
+            }
+        }
+    }
+
+    duration = (float)num_samples / (float)sample_rate;
     printf(" num_samples: %d \n", num_samples);
-    printf(" duration: %f \n", duration);
+    printf(" duration: %f (sec) \n", duration);
 
+    if (max_right == 0) {
+        printf(" max abs mono sample: %d \n", max_left);
+    } 
+    else {
+        printf(" max abs left sample: %d \n", max_left);
+        printf(" max abs right sample: %d \n", max_right);
+    }
 
     return 1;
+    
 }
 
 
