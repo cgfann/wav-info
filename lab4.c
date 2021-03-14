@@ -15,45 +15,50 @@
 #include <math.h>  
 
 
-int read_wav_header(FILE* in_file, short *sample_size_ptr, int *num_samples_ptr, int *sample_rate_ptr);
+int read_wav_header(FILE *in_file, short *sample_size_ptr, int *num_samples_ptr, int *sample_rate_ptr);
 int read_wav_data(FILE* in_file, short sample_size, int num_samples, int sample_rate);
 
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) 
+{
     FILE *in_file;      /* WAV file */
     short sample_size;  /* size of an audio sample (bits) */
-    int sample_rate;    /* sample rate (samples/second) */
     int num_samples;    /* number of audio samples */ 
+    int sample_rate;    /* sample rate (samples/second) */
     int wav_ok = 0;     /* 1 if the WAV file is ok, 0 otherwise */
 
-    if(argc < 2) {
+    if (argc < 2) {
         printf("usage: %s wav_file \n", argv[0]);
         return 1;
     }
 
     in_file = fopen(argv[1], "rbe"); 
-    if(!in_file) {
+    if (!in_file) {
         printf("could not open wav file %s \n", argv[1]);
         return 2;
     }
 
     wav_ok = read_wav_header(in_file, &sample_size, &num_samples, &sample_rate);
-    if(!wav_ok) {
+    if (!wav_ok) {
        printf("wav file %s has incompatible format \n", argv[1]);   
        return 3;
     }
-    else
-        read_wav_data(in_file, sample_size, num_samples, sample_rate);
+    else {
+         read_wav_data(in_file, sample_size, num_samples, sample_rate);
+    }   
 
-    if(in_file) fclose(in_file);
+    if (in_file) {
+        fclose(in_file);
+    }
     return 0;
 }
 
 
 /**
- *  function reads the RIFF, fmt, and start of the data chunk. 
+ *  function reads the RIFF, fmt, and start of the data chunk, prints relevant information 
  **/
-int read_wav_header(FILE* in_file, short *sample_size_ptr, int *num_samples_ptr, int *sample_rate_ptr) {
+int read_wav_header(FILE *in_file, short *sample_size_ptr, int *num_samples_ptr, int *sample_rate_ptr) 
+{
     char chunk_id[] = "    ";  /* chunk id, note initialize as a C-string */
     char data[] = "    ";      /* chunk data */
     int chunk_size = 0;        /* number of bytes remaining in chunk */
@@ -65,7 +70,7 @@ int read_wav_header(FILE* in_file, short *sample_size_ptr, int *num_samples_ptr,
     /* read info in RIFF chunk, chunk id, chunk size, chunk format */  
     fread(chunk_id, 4, 1, in_file);
     fread(&chunk_size, 4, 1, in_file);
-    printf("chunk: %s, size: %d \n", chunk_id, chunk_size);
+    printf("chunk: %s \n", chunk_id);
     fread(data, 4, 1, in_file);
     printf("  data: %s \n", data);
 
@@ -73,7 +78,7 @@ int read_wav_header(FILE* in_file, short *sample_size_ptr, int *num_samples_ptr,
     fread(chunk_id, 4, 1, in_file);
     /* if the next chunk is not "fmt " then skip over it */  
     while(strcmp(chunk_id, "fmt ") != 0) {
-        fread(&chunk_size, 4, 1, in_file); /* why is this here? */
+        fread(&chunk_size, 4, 1, in_file);
         /* skip to the end of this chunk */  
         fseek(in_file, chunk_size, SEEK_CUR);
         /* read the id of the next chuck */  
@@ -82,30 +87,33 @@ int read_wav_header(FILE* in_file, short *sample_size_ptr, int *num_samples_ptr,
 
     /* if we are here, then we must have the fmt chunk, now read that data */  
     fread(&chunk_size, 4, 1, in_file);
-    fread(&audio_format, 1,  sizeof(audio_format), in_file);    /*stuff need to be swapped*/
+    fread(&audio_format, 1,  sizeof(audio_format), in_file);
     fread(&num_channels, 1,  sizeof(num_channels), in_file);
     fread(&sample_rate, 1, sizeof(sample_rate), in_file);
     fseek(in_file, 6, SEEK_CUR);    /* skip byte rate and block align */
     fread(&bits_per_smp, 1, sizeof(bits_per_smp), in_file);
 
-
-    printf("chunk: %s, size: %d \n", chunk_id, chunk_size);
+    printf("chunk: %s \n", chunk_id);
     printf(" audio format: %d \n", audio_format);
     printf(" num channels: %d \n", num_channels);
     printf(" sample rate: %d \n", sample_rate);
     printf(" bits per sample: %d \n", bits_per_smp);
 
-    /* read the data chunk next, use another while loop (like above) */
-    /* visit http://goo.gl/rxnHB1 for helpful advice */
-
     fread(&chunk_id, 4, 1, in_file);
     while(strcmp(chunk_id, "data") != 0) {
-        fread(&chunk_size, 4, 1, in_file); /* why is this here? */
+        fread(&chunk_size, 4, 1, in_file);
         /* skip to the end of this chunk */  
         fseek(in_file, chunk_size, SEEK_CUR);
         /* read the id of the next chuck */  
         fread(chunk_id, 4, 1, in_file);
     }
+
+    fread(num_samples_ptr, 1, 4, in_file);
+    *sample_rate_ptr = sample_rate;
+    *sample_size_ptr = bits_per_smp;
+
+     printf("chunk: %s \n", chunk_id);
+
     return (audio_format == 1);
 }
 
@@ -113,9 +121,15 @@ int read_wav_header(FILE* in_file, short *sample_size_ptr, int *num_samples_ptr,
 /**
  *  function reads the WAV audio data (last part of the data chunk)
  **/
-int read_wav_data(FILE* in_file, short sample_size, int num_samples, int sample_rate) {
+int read_wav_data(FILE* in_file, short sample_size, int num_samples, int sample_rate) 
+{
+    float duration = num_samples / sample_rate;
 
-   return 1;
+    printf(" num_samples: %d \n", num_samples);
+    printf(" duration: %f \n", duration);
+
+
+    return 1;
 }
 
 
