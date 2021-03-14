@@ -67,6 +67,7 @@ int read_wav_header(FILE *in_file, short *sample_size_ptr, int *num_samples_ptr,
     short num_channels = 0;    /* number of audio channels */ 
     int sample_rate = 0;
     short bits_per_smp = 0; 
+    int num_samples = 0;
 
     /* read info in RIFF chunk, chunk id, chunk size, chunk format */  
     fread(chunk_id, 4, 1, in_file);
@@ -109,12 +110,13 @@ int read_wav_header(FILE *in_file, short *sample_size_ptr, int *num_samples_ptr,
         fread(chunk_id, 4, 1, in_file);
     }
 
-    fread(num_samples_ptr, 1, 4, in_file);
+    /* total number of bytes in data */
+    fread(&num_samples, 1, sizeof(num_samples), in_file);
     *sample_rate_ptr = sample_rate;
-    *sample_size_ptr = bits_per_smp;
+    *sample_size_ptr = bits_per_smp / 8;    /* size in bytes */
+    *num_samples_ptr = (num_samples / num_channels) / (*sample_size_ptr); 
     *num_channels_ptr = num_channels;
-
-     printf("chunk: %s \n", chunk_id);
+    printf("chunk: %s \n", chunk_id);
 
     return (audio_format == 1);
 }
@@ -126,21 +128,23 @@ int read_wav_header(FILE *in_file, short *sample_size_ptr, int *num_samples_ptr,
 int read_wav_data(FILE *in_file, short sample_size, int num_samples, int sample_rate, int num_channels) 
 {
     float duration;
-    int right = 0;               /* 1 if left channel, 0 if right channel */
+    int right = 1;               /* 1 if left channel, 0 if right channel */
     int curr_sample = 0;
     int max_left = 0;
     int max_right = 0;
     int i;
 
     /* read samples, byte by byte depending on number of channels and sample size */
-    for (i = 0; i < num_samples; i++) {
+    for (i = 0; i < num_samples * num_channels; i++) {
+        printf("%d\n", num_channels*num_samples);
         right = !right;
-        fread(&curr_sample, 1, sample_size / 8, in_file);
+        fread(&curr_sample, sample_size, 1, in_file);
         curr_sample = abs(curr_sample);
 
         /* only the left sample array is modified for one channel */
         if (!right || (num_channels == 1)) {
             if (curr_sample > max_left) {
+                printf("%d\n", curr_sample);
                 max_left = curr_sample;
             }
         }
