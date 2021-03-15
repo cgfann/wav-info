@@ -9,14 +9,14 @@
  * @course CSC 250
  **/
 
+#include <math.h>  
 #include <stdio.h>
 #include <stdlib.h>  
 #include <string.h>  
-#include <math.h>  
 
 
 int read_wav_header(FILE *in_file, short *sample_size_ptr, int *num_samples_ptr, int *sample_rate_ptr, int *num_channels_ptr);
-int read_wav_data(FILE* in_file, short sample_size, int num_samples, int sample_rate, int num_channels);
+void read_wav_data(FILE* in_file, short sample_size, int num_samples, int sample_rate, int num_channels);
 
 
 int main(int argc, char *argv[]) 
@@ -44,9 +44,7 @@ int main(int argc, char *argv[])
        printf("wav file %s has incompatible format \n", argv[1]);   
        return 3;
     }
-    else {
-         read_wav_data(in_file, sample_size, num_samples, sample_rate, num_channels);
-    }   
+    read_wav_data(in_file, sample_size, num_samples, sample_rate, num_channels);   
 
     if (in_file) {
         fclose(in_file);
@@ -110,10 +108,9 @@ int read_wav_header(FILE *in_file, short *sample_size_ptr, int *num_samples_ptr,
         fread(chunk_id, 4, 1, in_file);
     }
 
-    /* total number of bytes in data */
-    fread(&num_samples, 1, sizeof(num_samples), in_file);
+    fread(&num_samples, 1, sizeof(num_samples), in_file);   /* total bytes of data*/
     *sample_rate_ptr = sample_rate;
-    *sample_size_ptr = bits_per_smp / 8;    /* size in bytes */
+    *sample_size_ptr = bits_per_smp / 8;                    /* sample size in bytes */
     *num_samples_ptr = (num_samples / num_channels) / (*sample_size_ptr); 
     *num_channels_ptr = num_channels;
     printf("chunk: %s \n", chunk_id);
@@ -125,10 +122,10 @@ int read_wav_header(FILE *in_file, short *sample_size_ptr, int *num_samples_ptr,
 /**
  *  function reads the WAV audio data (last part of the data chunk)
  **/
-int read_wav_data(FILE *in_file, short sample_size, int num_samples, int sample_rate, int num_channels) 
+void read_wav_data(FILE *in_file, short sample_size, int num_samples, int sample_rate, int num_channels) 
 {
     float duration;
-    int right = 1;               /* 1 if left channel, 0 if right channel */
+    int right = 1;               /* 0 if left channel, 1 if right channel */
     short curr_sample = 0;
     short max_left = 0;
     short max_right = 0;
@@ -164,8 +161,6 @@ int read_wav_data(FILE *in_file, short sample_size, int num_samples, int sample_
         printf(" max abs left sample: %d \n", max_left);
         printf(" max abs right sample: %d \n", max_right);
     }
-
-    return 1;
     
 }
 

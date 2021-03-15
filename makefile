@@ -6,7 +6,7 @@
 
 SOURCE = lab4.c
 EXECUTABLE = lab4
-COMPILE_FLAGS = -ansi -pedantic -Wall
+COMPILE_FLAGS = -ansi -pedantic -Wall -g
 
 all: 
 	gcc $(COMPILE_FLAGS) -o $(EXECUTABLE) $(SOURCE)
