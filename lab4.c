@@ -126,16 +126,19 @@ void read_wav_data(FILE *in_file, short sample_size, int num_samples, int sample
 {
     float duration;
     int right = 1;               /* 0 if left channel, 1 if right channel */
-    short curr_sample = 0;
-    short max_left = 0;
-    short max_right = 0;
+    int curr_sample = 0;
+    int max_left = 0;
+    int max_right = 0;
     int i;
 
     /* read samples, byte by byte depending on number of channels and sample size */
     for (i = 0; i < num_samples * num_channels; i++) {
         right = !right;
         fread(&curr_sample, sample_size, 1, in_file);
-        curr_sample = abs(curr_sample);
+
+        if (sample_size == 2) {
+            curr_sample = abs((short)curr_sample);
+        }
 
         /* only the left sample array is modified for one channel */
         if (!right || (num_channels == 1)) {
